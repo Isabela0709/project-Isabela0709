@@ -78,7 +78,135 @@ graph LR
 - [Scrie aici ce ai făcut, ex: Connexion de l'écran OLED et test d'affichage]
 
 ### Week 20 - 26 May
-- [Scrie aici ce ai făcut, ex: Programmation de la logique de Flappy Bird et intégration du bouton]
+#include <Wire.h>
+#include "SSD1306Wire.h" //librarie instalata pt ecran
+#include "images.h" 
+#include "fontovi.h"
+
+SSD1306Wire display(0x3c, 21, 22); //aici se initializeaza ecranul cu porturile in care am pus firele 
+
+float zidx[4];
+int prazan[4];
+int space = 32;
+int throughlength = 30;
+
+int score = 0;
+int stis = 0;
+float fx = 30.00;
+float fy = 22.00;
+int direction = 0;
+unsigned long timp = 0;
+
+int joc = 0;
+int frame = 0;
+int start = 0;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(2, OUTPUT);
+  pinMode(4, INPUT_PULLUP);
+
+  display.init();
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_10);
+
+  for (int i = 0; i < 4; i++) {
+    zidx[i] = 128 + ((i + 1) * space);
+    prazan[i] = random(8, 32);
+  }
+}
+
+void loop() {
+  display.clear();
+
+  if (joc == 0) {
+    display.drawXbm(0, 0, 128, 64, pozadina);
+    display.drawXbm(20, 32, 14, 9, ptica);
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 44, "Press to start");
+    if (digitalRead(4) == 0)
+      joc = 1;
+  }
+
+  if (joc == 1) {
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(3, 0, String(score));
+
+    if (digitalRead(4) == 0) {
+      if (stis == 0) {
+        timp = millis();
+        direction = 1;
+        start = 1;
+        stis = 1;
+      }
+    } else {
+      stis = 0;
+    }
+
+    // Draw walls
+    for (int j = 0; j < 4; j++) {
+      display.setColor(WHITE);
+      display.fillRect(zidx[j], 0, 6, 64);
+      display.setColor(BLACK);
+      display.fillRect(zidx[j], prazan[j], 6, throughlength);
+    }
+
+    // Draw bird
+    display.setColor(WHITE);
+    display.drawXbm(fx, fy, 14, 9, ptica);
+
+    // Move walls
+    for (int j = 0; j < 4; j++) {
+      zidx[j] = zidx[j] - 0.01;
+      if (zidx[j] < -7) {
+        score = score + 1;
+        prazan[j] = random(8, 32);
+        zidx[j] = 128;
+      }
+    }
+
+    // Gravity
+    if ((timp + 185) < millis())
+      direction = 0;
+
+    if ((start + 40) < millis())
+      start = 0;
+
+    if (direction == 0)
+      fy = fy + 0.01;
+    else
+      fy = fy - 0.03;
+
+    // Out of bounds — game over
+    if (fy > 63 || fy < 0) {
+      resetGame();
+    }
+
+    // Collision detection
+    for (int m = 0; m < 4; m++) {
+      if (zidx[m] <= fx + 7 && fx + 7 <= zidx[m] + 6) {
+        if (fy < prazan[m] || fy + 8 > prazan[m] + throughlength) {
+          resetGame();
+        }
+      }
+    }
+
+    display.drawRect(0, 0, 128, 64);
+  }
+
+  display.display();
+}
+
+void resetGame() {
+  joc = 0;
+  fy = 22;
+  score = 0;
+  delay(500);
+  for (int i = 0; i < 4; i++) {
+    zidx[i] = 128 + ((i + 1) * space);
+    prazan[i] = random(8, 32);
+  }
+}
 
 ## Reference links
 
